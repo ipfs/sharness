@@ -180,12 +180,18 @@ if test -n "$color"; then
 			*) say_color_color=$say_color_raw ;;
 		esac
 		shift
+		if test -n "$TEST_GENERATE_JUNIT"; then
+			echo "$*" >> .junit/tout
+		fi
 		printf '%s%s%s\n' "$say_color_color" "$*" "$say_color_reset"
 	}
 else
 	say_color() {
 		test -z "$1" && test -n "$quiet" && return
 		shift
+		if test -n "$TEST_GENERATE_JUNIT"; then
+			echo "$*" >> .junit/tout
+		fi
 		printf '%s\n' "$*"
 	}
 fi
@@ -235,6 +241,12 @@ error() {
 
 say() {
 	say_color info "$*"
+}
+
+esc=$(printf '\033')
+
+esc_xml() {
+	sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"$esc"'//g; s///g;'
 }
 
 test -n "${test_description:-}" || error "Test script did not set test_description."
@@ -296,30 +308,78 @@ test_success=0
 
 . "$SHARNESS_TEST_SRCDIR/lib-sharness/functions.sh"
 
+# junit_testcase generates a testcase xml file after each test
+
+junit_testcase() {
+	if test -z "$TEST_GENERATE_JUNIT"; then
+		return
+	fi
+
+	test_name=$1
+	tc_file=".junit/case-$(printf "%04d" $SHARNESS_TEST_NB)"
+	time_sec="$(cat .junit/time | xargs printf '%04d' | sed -e 's/\(...\)$/.\1/g')"
+
+	echo "$(expr $(cat .junit/time_total) + $(cat .junit/time) )" > .junit/time_total
+
+	shift
+	cat > "$tc_file" <<-EOF
+	<testcase name="$SHARNESS_TEST_NB - $(echo $test_name | esc_xml)" classname="sharness$(uname -s).${SHARNESS_TEST_NAME}" time="${time_sec}">
+	$@
+	EOF
+
+	if test -f .junit/tout; then
+		cat >> "$tc_file" <<-EOF
+		<system-out>
+			$(cat .junit/tout | esc_xml)
+		</system-out>
+		EOF
+	fi
+
+	if test -f .junit/terr; then
+		cat >> "$tc_file" <<-EOF
+		<system-err>
+			$(cat .junit/terr | esc_xml)
+		</system-err>
+		EOF
+	fi
+
+	echo "</testcase>" >> "$tc_file"
+	rm -f .junit/tout .junit/terr .junit/time
+}
+
 # You are not expected to call test_ok_ and test_failure_ directly, use
 # the text_expect_* functions instead.
 
 test_ok_() {
 	test_success=$((test_success + 1))
 	say_color "" "ok $SHARNESS_TEST_NB - $*"
+
+	junit_testcase "$@"
 }
 
 test_failure_() {
 	test_failure=$((test_failure + 1))
 	say_color error "not ok $SHARNESS_TEST_NB - $1"
+	test_name=$1
 	shift
 	echo "$@" | sed -e 's/^/#	/'
+	junit_testcase "$test_name" '<failure type="">'$(echo $@ | esc_xml)'</failure>'
+
 	test "$immediate" = "" || { EXIT_OK=t; exit 1; }
 }
 
 test_known_broken_ok_() {
 	test_fixed=$((test_fixed + 1))
 	say_color error "ok $SHARNESS_TEST_NB - $* # TODO known breakage vanished"
+
+	junit_testcase "$@" '<failure type="known breakage vanished"/>'
 }
 
 test_known_broken_failure_() {
 	test_broken=$((test_broken + 1))
 	say_color warn "not ok $SHARNESS_TEST_NB - $* # TODO known breakage"
+
+	junit_testcase "$@"
 }
 
 want_trace () {
@@ -361,7 +421,11 @@ test_eval_x_ () {
 	#     be _inside_ the block to avoid polluting the "set -x" output
 	#
 
-	test_eval_inner_ "$@" </dev/null >&3 2>&4
+	if test -n "$TEST_GENERATE_JUNIT"; then
+		test_eval_inner_ "$@" </dev/null > >(tee -a .junit/tout >&3) 2> >(tee -a .junit/terr >&4)
+	else
+		test_eval_inner_ "$@" </dev/null >&3 2>&4
+	fi
 	{
 		test_eval_ret_=$?
 		if want_trace
@@ -391,8 +455,14 @@ test_eval_() {
 test_run_() {
 	test_cleanup=:
 	expecting_failure=$2
+
+	start_time_ms=$(date "+%s%3N");
 	test_eval_ "$1"
 	eval_ret=$?
+
+	if test -n "$TEST_GENERATE_JUNIT"; then
+		echo $(expr $(date "+%s%3N") - ${start_time_ms} ) > .junit/time;
+	fi
 
 	if test "$chain_lint" = "t"; then
 		# turn off tracing for this test-eval, as it simply creates
@@ -441,6 +511,16 @@ test_skip_() {
 
 		say_color skip >&3 "skipping test: $*"
 		say_color skip "ok $SHARNESS_TEST_NB # skip $1 (missing $missing_prereq${of_prereq})"
+
+		if test -n "$TEST_GENERATE_JUNIT"; then
+			cat > ".junit/case-$(printf "%04d" $SHARNESS_TEST_NB)" <<-EOF
+			<testcase name="$SHARNESS_TEST_NB - $(echo $2 | esc_xml)" classname="sharness$(uname -s).${SHARNESS_TEST_NAME}" time="0">
+				<skipped>
+					skip $(echo $1 | esc_xml) (missing $missing_prereq${of_prereq})
+				</skipped>
+			</testcase>
+			EOF
+		fi
 		: true
 		;;
 	*)
@@ -459,6 +539,9 @@ export PATH
 # Public: Path to test script currently executed.
 SHARNESS_TEST_FILE="$0"
 export SHARNESS_TEST_FILE
+
+SHARNESS_TEST_NAME=$(basename ${SHARNESS_TEST_FILE} ".sh")
+export SHARNESS_TEST_NAME
 
 remove_trash_() {
 	test -d "$remove_trash" && (
@@ -523,6 +606,12 @@ check_skip_all_() {
 	fi
 	[ -z "$skip_all" ] || skip_all=" # SKIP $skip_all"
 }
+
+# Prepare JUnit report dir
+if test -n "$TEST_GENERATE_JUNIT"; then
+	mkdir -p .junit
+	echo 0 > .junit/time_total
+fi
 
 this_test=${SHARNESS_TEST_FILE##*/}
 this_test=${this_test%.$SHARNESS_TEST_EXTENSION}

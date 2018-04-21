@@ -188,7 +188,7 @@ test_expect_success() {
 	test "$#" = 3 && { test_prereq=$1; shift; } || test_prereq=
 	test "$#" = 2 || error "bug in the test script: not 2 or 3 parameters to test_expect_success"
 	export test_prereq
-	if ! test_skip_ "$@"; then
+	if ! test_skip_ "$@" "$1"; then
 		say >&3 "expecting success: $2"
 		if test_run_ "$2"; then
 			test_ok_ "$1"
@@ -227,7 +227,7 @@ test_expect_failure() {
 	test "$#" = 3 && { test_prereq=$1; shift; } || test_prereq=
 	test "$#" = 2 || error "bug in the test script: not 2 or 3 parameters to test_expect_failure"
 	export test_prereq
-	if ! test_skip_ "$@"; then
+	if ! test_skip_ "$@" "$1"; then
 		say >&3 "checking known breakage: $2"
 		if test_run_ "$2" expecting_failure; then
 			test_known_broken_ok_ "$1"
@@ -265,7 +265,7 @@ test_expect_unstable() {
 	test "$#" = 3 && { test_prereq=$1; shift; } || test_prereq=
 	test "$#" = 2 || error "bug in the test script: not 2 or 3 parameters to test_expect_unstable"
 	export test_prereq
-	if ! test_skip_ "$@"; then
+	if ! test_skip_ "$@" "$1"; then
 		say >&3 "checking unstable test: $2"
 		if test_run_ "$2" unstable; then
 			test_ok_ "$1"
@@ -543,6 +543,7 @@ test_done() {
 		test_results_dir="$SHARNESS_TEST_OUTDIR/test-results"
 		mkdir -p "$test_results_dir"
 		test_results_path="$test_results_dir/$this_test.$$.counts"
+		junit_results_path="$test_results_dir/$this_test.$$.xml.part"
 
 		cat >>"$test_results_path" <<-EOF
 		total $SHARNESS_TEST_NB
@@ -552,6 +553,16 @@ test_done() {
 		failed $test_failure
 
 		EOF
+
+		if test -n "$TEST_GENERATE_JUNIT"; then
+			time_sec="$(cat .junit/time_total | xargs printf "%04d" | sed -e 's/\(...\)$/.\1/g')"
+
+			cat >>"$junit_results_path" <<-EOF
+			<testsuite errors="$test_broken" failures="$((test_failure+test_fixed))" tests="$SHARNESS_TEST_NB" package="sharness$(uname -s).${SHARNESS_TEST_NAME}" time="${time_sec}">
+				$(find .junit -name 'case-*' | sort | xargs cat)
+			</testsuite>
+			EOF
+		fi
 	fi
 
 	if test "$test_fixed" != 0; then
