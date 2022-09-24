@@ -27,10 +27,13 @@
 : "${this_test:=}"
 : "${skip_all:=}"
 : "${EXIT_OK:=}"
+: "${timestamp:=}"
+: "${hostname:=}"
 : "${test_failure:=0}"
 : "${test_fixed:=0}"
 : "${test_broken:=0}"
 : "${test_success:=0}"
+: "${test_skipped:=0}"
 
 # Public: Define that a test prerequisite is available.
 #
@@ -551,6 +554,7 @@ test_done() {
 		fixed $test_fixed
 		broken $test_broken
 		failed $test_failure
+		skipped $test_skipped
 
 		EOF
 
@@ -558,7 +562,7 @@ test_done() {
 			time_sec="$(cat .junit/time_total | xargs printf "%04d" | sed -e 's/\(...\)$/.\1/g')"
 
 			cat >>"$junit_results_path" <<-EOF
-			<testsuite errors="$test_broken" failures="$((test_failure+test_fixed))" tests="$SHARNESS_TEST_NB" package="sharness$(uname -s).${SHARNESS_TEST_NAME}" time="${time_sec}">
+			<testsuite skipped="$test_skipped" errors="$test_broken" failures="$((test_failure+test_fixed))" tests="$SHARNESS_TEST_NB" package="sharness$(uname -s).${SHARNESS_TEST_NAME}" name="${SHARNESS_TEST_NAME}" time="${time_sec}" timestamp="${timestamp}" hostname="${hostname}">
 				$(find .junit -name 'case-*' | sort | xargs cat)
 			</testsuite>
 			EOF

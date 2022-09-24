@@ -305,6 +305,11 @@ test_failure=0
 test_fixed=0
 test_broken=0
 test_success=0
+timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+hostname="$(uname -nmsr)"
+
+
+
 
 . "$SHARNESS_TEST_SRCDIR/lib-sharness/functions.sh"
 
@@ -363,7 +368,7 @@ test_failure_() {
 	test_name=$1
 	shift
 	echo "$@" | sed -e 's/^/#	/'
-	junit_testcase "$test_name" '<failure type="">'$(echo $@ | esc_xml)'</failure>'
+	junit_testcase "$test_name" '<failure type="unknown">'$(echo $@ | esc_xml)'</failure>'
 
 	test "$immediate" = "" || { EXIT_OK=t; exit 1; }
 }
@@ -379,7 +384,7 @@ test_known_broken_failure_() {
 	test_broken=$((test_broken + 1))
 	say_color warn "not ok $SHARNESS_TEST_NB - $* # TODO known breakage"
 
-	junit_testcase "$@"
+	junit_testcase "$@" '<error type="known breakage"/>'
 }
 
 want_trace () {
@@ -504,6 +509,8 @@ test_skip_() {
 	fi
 	case "$to_skip" in
 	t)
+		test_skipped=$(($test_skipped + 1))
+
 		of_prereq=
 		if test "$missing_prereq" != "$test_prereq"; then
 			of_prereq=" of $test_prereq"
