@@ -26,6 +26,7 @@
 : "${verbose:=}"
 : "${this_test:=}"
 : "${skip_all:=}"
+: "${junit:=}"
 : "${EXIT_OK:=}"
 : "${timestamp:=}"
 : "${hostname:=}"
@@ -558,7 +559,7 @@ test_done() {
 
 		EOF
 
-		if test -n "$TEST_GENERATE_JUNIT"; then
+		if test -n "$junit"; then
 			time_sec="$(cat .junit/time_total | xargs printf "%04d" | sed -e 's/\(...\)$/.\1/g')"
 
 			cat >>"$junit_results_path" <<-EOF

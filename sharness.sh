@@ -119,6 +119,8 @@ while test "$#" -ne 0; do
 		TEST_LONG=t; export TEST_LONG; shift ;;
 	--in|--int|--inte|--inter|--intera|--interac|--interact|--interacti|--interactiv|--interactive|--interactive-|--interactive-t|--interactive-te|--interactive-tes|--interactive-test|--interactive-tests):
 		TEST_INTERACTIVE=t; export TEST_INTERACTIVE; verbose=t; shift ;;
+	-j|--j|--ju|--jun|--juni|--junit)
+		junit=t; shift ;;
 	-h|--h|--he|--hel|--help)
 		help=t; shift ;;
 	-v|--v|--ve|--ver|--verb|--verbo|--verbos|--verbose)
@@ -180,7 +182,7 @@ if test -n "$color"; then
 			*) say_color_color=$say_color_raw ;;
 		esac
 		shift
-		if test -n "$TEST_GENERATE_JUNIT"; then
+		if test -n "$junit"; then
 			echo "$*" >> .junit/tout
 		fi
 		printf '%s%s%s\n' "$say_color_color" "$*" "$say_color_reset"
@@ -189,7 +191,7 @@ else
 	say_color() {
 		test -z "$1" && test -n "$quiet" && return
 		shift
-		if test -n "$TEST_GENERATE_JUNIT"; then
+		if test -n "$junit"; then
 			echo "$*" >> .junit/tout
 		fi
 		printf '%s\n' "$*"
@@ -228,6 +230,19 @@ fi
 if test -n "$trace" && test -z "$verbose_log"
 then
 	verbose=t
+fi
+
+if test -n "$junit"
+then
+	eval "echo <()" > /dev/null 2>&1
+	eval_ret=$?
+	if test "$eval_ret" == 0
+	then
+		: Process substitution supported by current shell.  Good.
+	else
+		echo >&2 "warning: ignoring -j; '$0' cannot generate junit report without process substitution support"
+		junit=
+	fi
 fi
 
 TERM=dumb
@@ -316,7 +331,7 @@ hostname="$(uname -nmsr)"
 # junit_testcase generates a testcase xml file after each test
 
 junit_testcase() {
-	if test -z "$TEST_GENERATE_JUNIT"; then
+	if test -z "$junit"; then
 		return
 	fi
 
@@ -426,8 +441,8 @@ test_eval_x_ () {
 	#     be _inside_ the block to avoid polluting the "set -x" output
 	#
 
-	if test -n "$TEST_GENERATE_JUNIT"; then
-		test_eval_inner_ "$@" </dev/null > >(tee -a .junit/tout >&3) 2> >(tee -a .junit/terr >&4)
+	if test -n "$junit"; then
+		eval 'test_eval_inner_ "$@" </dev/null > >(tee -a .junit/tout >&3) 2> >(tee -a .junit/terr >&4)'
 	else
 		test_eval_inner_ "$@" </dev/null >&3 2>&4
 	fi
@@ -465,7 +480,7 @@ test_run_() {
 	test_eval_ "$1"
 	eval_ret=$?
 
-	if test -n "$TEST_GENERATE_JUNIT"; then
+	if test -n "$junit"; then
 		echo $(expr $(date "+%s%3N") - ${start_time_ms} ) > .junit/time;
 	fi
 
@@ -519,7 +534,7 @@ test_skip_() {
 		say_color skip >&3 "skipping test: $*"
 		say_color skip "ok $SHARNESS_TEST_NB # skip $1 (missing $missing_prereq${of_prereq})"
 
-		if test -n "$TEST_GENERATE_JUNIT"; then
+		if test -n "$junit"; then
 			cat > ".junit/case-$(printf "%04d" $SHARNESS_TEST_NB)" <<-EOF
 			<testcase name="$SHARNESS_TEST_NB - $(echo $2 | esc_xml)" classname="sharness$(uname -s).${SHARNESS_TEST_NAME}" time="0">
 				<skipped>
@@ -615,7 +630,7 @@ check_skip_all_() {
 }
 
 # Prepare JUnit report dir
-if test -n "$TEST_GENERATE_JUNIT"; then
+if test -n "$junit"; then
 	mkdir -p .junit
 	echo 0 > .junit/time_total
 fi
