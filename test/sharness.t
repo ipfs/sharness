@@ -256,16 +256,16 @@ test_expect_success 'pretend we have a pass, fail, and known breakage using --ve
 	EOF
 	echo 1 >expect &&
 	test_cmp expect ../test-results/.mixed-results3.exit &&
-	sed -e 's/^> //' >expect <<-\\EOF &&
+	sed -e 's/^> *//' >expect <<-\\EOF &&
 	> expecting success: true
-	> 
+	>
 	> ok 1 - passing test
 	> expecting success: false
 	> not ok 2 - failing test
 	> #	false
-	> 
+	>
 	> checking known breakage: false
-	> 
+	>
 	> not ok 3 - pretend we have a known breakage # TODO known breakage
 	> # still have 1 known breakage(s)
 	> # failed 1 among remaining 2 test(s)
@@ -317,6 +317,35 @@ test_expect_success 'pretend we have a pass, fail, and known breakage using -x' 
 		EOF
 		sed -e 's/^++* */+/' >clean_err <err &&
 		test_cmp expect_err clean_err
+	)
+"
+
+test_expect_success 'pretend we have a mix of all possible results using --junit' "
+	SHELL_PATH=/bin/bash test_must_fail run_sub_test_lib_test \
+		mixed-results5 'mixed results #5' '' --junit <<-\\EOF &&
+	test_expect_success 'passing test' 'true'
+	test_expect_success 'failing test' 'false'
+	test_expect_failure 'pretend we have a known breakage' 'false'
+	test_expect_failure 'pretend we have fixed a known breakage' 'true'
+	test_expect_success DONTHAVEIT 'skipped test' 'true'
+	test_done
+	EOF
+	check_sub_test_lib_test mixed-results5 <<-\\EOF &&
+	> ok 1 - passing test
+	> not ok 2 - failing test
+	> #	false
+	> not ok 3 - pretend we have a known breakage # TODO known breakage
+	> ok 4 - pretend we have fixed a known breakage # TODO known breakage vanished
+	> ok 5 # skip skipped test (missing DONTHAVEIT)
+	> # 1 known breakage(s) vanished; please update test(s)
+	> # still have 1 known breakage(s)
+	> # failed 1 among remaining 3 test(s)
+	> 1..5
+	EOF
+	(
+		command -v xmllint > /dev/null &&
+		xmllint --noout ../test-results/.mixed-results5.*.xml.part ||
+		echo 'xmllint not found, skipping XML validation'
 	)
 "
 

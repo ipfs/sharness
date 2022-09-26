@@ -183,7 +183,7 @@ if test -n "$color"; then
 		esac
 		shift
 		if test -n "$junit"; then
-			echo "$*" >> .junit/tout
+			echo "$*" >> .junit/stdout
 		fi
 		printf '%s%s%s\n' "$say_color_color" "$*" "$say_color_reset"
 	}
@@ -192,7 +192,7 @@ else
 		test -z "$1" && test -n "$quiet" && return
 		shift
 		if test -n "$junit"; then
-			echo "$*" >> .junit/tout
+			echo "$*" >> .junit/stdout
 		fi
 		printf '%s\n' "$*"
 	}
@@ -256,12 +256,6 @@ error() {
 
 say() {
 	say_color info "$*"
-}
-
-esc=$(printf '\033')
-
-esc_xml() {
-	sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"$esc"'//g; s///g;'
 }
 
 test -n "${test_description:-}" || error "Test script did not set test_description."
@@ -343,28 +337,24 @@ junit_testcase() {
 
 	shift
 	cat > "$tc_file" <<-EOF
-	<testcase name="$SHARNESS_TEST_NB - $(echo $test_name | esc_xml)" classname="sharness$(uname -s).${SHARNESS_TEST_NAME}" time="${time_sec}">
+	<testcase name="$SHARNESS_TEST_NB - $test_name" classname="sharness$(uname -s).${SHARNESS_TEST_NAME}" time="${time_sec}">
 	$@
 	EOF
 
-	if test -f .junit/tout; then
+	if test -f .junit/stdout && test -s .junit/stdout; then
 		cat >> "$tc_file" <<-EOF
-		<system-out>
-			$(cat .junit/tout | esc_xml)
-		</system-out>
+		<system-out><![CDATA[$(cat .junit/stdout)]]></system-out>
 		EOF
 	fi
 
-	if test -f .junit/terr; then
+	if test -f .junit/stderr && test -s .junit/stderr; then
 		cat >> "$tc_file" <<-EOF
-		<system-err>
-			$(cat .junit/terr | esc_xml)
-		</system-err>
+		<system-err><![CDATA[$(cat .junit/stderr)]]></system-err>
 		EOF
 	fi
 
 	echo "</testcase>" >> "$tc_file"
-	rm -f .junit/tout .junit/terr .junit/time
+	rm -f .junit/stdout .junit/stderr .junit/time
 }
 
 # You are not expected to call test_ok_ and test_failure_ directly, use
@@ -383,7 +373,7 @@ test_failure_() {
 	test_name=$1
 	shift
 	echo "$@" | sed -e 's/^/#	/'
-	junit_testcase "$test_name" '<failure type="unknown">'$(echo $@ | esc_xml)'</failure>'
+	junit_testcase "$test_name" "<failure type=\"unknown\"><![CDATA[$@]]></failure>"
 
 	test "$immediate" = "" || { EXIT_OK=t; exit 1; }
 }
@@ -442,7 +432,7 @@ test_eval_x_ () {
 	#
 
 	if test -n "$junit"; then
-		eval 'test_eval_inner_ "$@" </dev/null > >(tee -a .junit/tout >&3) 2> >(tee -a .junit/terr >&4)'
+		eval 'test_eval_inner_ "$@" </dev/null > >(tee -a .junit/stdout >&3) 2> >(tee -a .junit/stderr >&4)'
 	else
 		test_eval_inner_ "$@" </dev/null >&3 2>&4
 	fi
@@ -536,9 +526,9 @@ test_skip_() {
 
 		if test -n "$junit"; then
 			cat > ".junit/case-$(printf "%04d" $SHARNESS_TEST_NB)" <<-EOF
-			<testcase name="$SHARNESS_TEST_NB - $(echo $2 | esc_xml)" classname="sharness$(uname -s).${SHARNESS_TEST_NAME}" time="0">
+			<testcase name="$SHARNESS_TEST_NB - $1" classname="sharness$(uname -s).${SHARNESS_TEST_NAME}" time="0">
 				<skipped>
-					skip $(echo $1 | esc_xml) (missing $missing_prereq${of_prereq})
+					skip $1 (missing $missing_prereq${of_prereq})
 				</skipped>
 			</testcase>
 			EOF

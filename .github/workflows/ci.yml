@@ -22,3 +22,10 @@ jobs:
         TEST_OPTS: -v
         MSYS: winsymlinks:nativestrict
       run: make test
+    - if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.os }}
+        path: |
+          test/test-results/
+          test/trash directory*/
