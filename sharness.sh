@@ -462,16 +462,20 @@ test_eval_() {
 	esac
 }
 
+time_now_ms() {
+	date --version >/dev/null 2>&1 && date +%s%3N || date +%s000
+}
+
 test_run_() {
 	test_cleanup=:
 	expecting_failure=$2
 
-	start_time_ms=$(date "+%s%3N");
+	start_time_ms=$(time_now_ms);
 	test_eval_ "$1"
 	eval_ret=$?
 
 	if test -n "$junit"; then
-		echo $(expr $(date "+%s%3N") - ${start_time_ms} ) > .junit/time;
+		echo $(expr $(time_now_ms) - ${start_time_ms} ) > .junit/time;
 	fi
 
 	if test "$chain_lint" = "t"; then
