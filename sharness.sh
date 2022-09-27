@@ -627,6 +627,7 @@ check_skip_all_() {
 if test -n "$junit"; then
 	mkdir -p .junit
 	echo 0 > .junit/time_total
+	eval 'exec > >(tee -a .junit/stdout_total) 2> >(tee -a .junit/stderr_total)'
 fi
 
 this_test=${SHARNESS_TEST_FILE##*/}

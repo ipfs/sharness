@@ -565,8 +565,22 @@ test_done() {
 			cat >>"$junit_results_path" <<-EOF
 			<testsuite skipped="$test_skipped" errors="$test_broken" failures="$((test_failure+test_fixed))" tests="$SHARNESS_TEST_NB" package="sharness$(uname -s).${SHARNESS_TEST_NAME}" name="${SHARNESS_TEST_NAME}" time="${time_sec}" timestamp="${timestamp}" hostname="${hostname}">
 				$(find .junit -name 'case-*' | sort | xargs cat)
-			</testsuite>
+				$(pwd)
 			EOF
+
+			if test -f .junit/stdout_total && test -s .junit/stdout_total; then
+				cat >> "$junit_results_path" <<-EOF
+				<system-out><![CDATA[$(cat .junit/stdout_total)]]></system-out>
+				EOF
+			fi
+
+			if test -f .junit/stderr_total && test -s .junit/stderr_total; then
+				cat >> "$junit_results_path" <<-EOF
+				<system-err><![CDATA[$(cat .junit/stderr_total)]]></system-err>
+				EOF
+			fi
+
+			echo "</testsuite>" >> "$junit_results_path"
 		fi
 	fi
 
