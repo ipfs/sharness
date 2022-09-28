@@ -7,7 +7,7 @@ EXAMPLE_DIR = $(DOC_DIR)/examples
 VIM_DIR = $(prefix)/.vim/pack/filetypes/start/sharness
 
 INSTALL_FILES = sharness.sh
-LIB_FILES = aggregate-results.sh lib-sharness/functions.sh
+LIB_FILES = aggregate-results.sh aggregate-junit-reports.sh lib-sharness/functions.sh
 DOC_FILES = API.md CHANGELOG.md COPYING README.git README.md
 EXAMPLE_FILES = test/Makefile test/simple.t
 
@@ -24,7 +24,7 @@ install: all
 	$(INSTALL) -m 644 $(INSTALL_FILES) $(INSTALL_DIR)
 	$(INSTALL) -m 644 $(LIB_FILES) $(LIB_DIR)
 	$(INSTALL) -m 644 $(DOC_FILES) $(DOC_DIR)
-	$(SED) -e "s!aggregate-results.sh!$(LIB_DIR)/aggregate-results.sh!" test/Makefile > $(EXAMPLE_DIR)/Makefile
+	$(SED) -e "s!aggregate-results.sh!$(LIB_DIR)/aggregate-results.sh!" "s!aggregate-junit-reports.sh!$(LIB_DIR)/aggregate-junit-reports.sh!" test/Makefile > $(EXAMPLE_DIR)/Makefile
 	$(SED) -e "s!SHARNESS_TEST_SRCDIR:=.!SHARNESS_TEST_SRCDIR:=$(INSTALL_DIR)!" test/simple.t > $(EXAMPLE_DIR)/simple.t
 
 install-vim:

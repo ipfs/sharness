@@ -22,6 +22,7 @@ SHELL_PATH_SQ = $(subst ','\'',$(SHELL_PATH))
 RM ?= rm -f
 PROVE ?= prove
 AGGREGATE_SCRIPT ?= aggregate-results.sh
+AGGREGATE_JUNIT_SCRIPT ?= aggregate-junit-reports.sh
 DEFAULT_TEST_TARGET ?= test
 
 T = $(sort $(wildcard *.t))
@@ -56,5 +57,11 @@ aggregate-results:
 		echo "$$f"; \
 	done | '$(SHELL_PATH_SQ)' '$(AGGREGATE_SCRIPT)'
 
+aggregate-junit-reports:
+	for f in test-results/*.xml.part; do \
+		echo "$$f"; \
+	done | '$(SHELL_PATH_SQ)' '$(AGGREGATE_JUNIT_SCRIPT)'
+
 .PHONY: all test prove $(T) pre-clean clean
 .PHONY: aggregate-results-and-cleanup aggregate-results
+.PHONY: aggregate-junit-reports
