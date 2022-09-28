@@ -75,6 +75,7 @@ satisfied_prereq=" "
 #   fi
 #
 # Returns 0 if all prerequisites are defined or 1 otherwise.
+# shellcheck disable=SC2068
 test_have_prereq() {
 	# prerequisites can be concatenated with ','
 	save_IFS=$IFS
@@ -560,7 +561,7 @@ test_done() {
 		EOF
 
 		if test -n "$junit"; then
-			time_sec="$(cat .junit/time_total | xargs printf "%04d" | sed -e 's/\(...\)$/.\1/g')"
+			time_sec="$(printf "%04d" "$(cat .junit/time_total)" | sed -e 's/\(...\)$/.\1/g')"
 
 			cat >>"$junit_results_path" <<-EOF
 			<testsuite skipped="$test_skipped" errors="$test_broken" failures="$((test_failure+test_fixed))" tests="$SHARNESS_TEST_NB" package="sharness$(uname -s).${SHARNESS_TEST_NAME}" name="${SHARNESS_TEST_NAME}" time="${time_sec}" timestamp="${timestamp}" hostname="${hostname}">

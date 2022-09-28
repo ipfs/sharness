@@ -55,7 +55,7 @@ fi
 export SHARNESS_TEST_OUTDIR
 
 #  Reset TERM to original terminal if found, otherwise save original TERM
-[ "x" = "x$SHARNESS_ORIG_TERM" ] &&
+[ "" = "$SHARNESS_ORIG_TERM" ] &&
 		SHARNESS_ORIG_TERM="$TERM" ||
 		TERM="$SHARNESS_ORIG_TERM"
 # Public: The unsanitized TERM under which sharness is originally run
@@ -331,9 +331,9 @@ junit_testcase() {
 
 	test_name=$1
 	tc_file=".junit/case-$(printf "%04d" $SHARNESS_TEST_NB)"
-	time_sec="$(cat .junit/time | xargs printf '%04d' | sed -e 's/\(...\)$/.\1/g')"
+	time_sec="$(printf '%04d' "$(cat .junit/time)" | sed -e 's/\(...\)$/.\1/g')"
 
-	echo "$(expr $(cat .junit/time_total) + $(cat .junit/time) )" > .junit/time_total
+	echo "$(($(cat .junit/time_total) + $(cat .junit/time) ))" > .junit/time_total
 
 	shift
 	cat > "$tc_file" <<-EOF
@@ -373,7 +373,7 @@ test_failure_() {
 	test_name=$1
 	shift
 	echo "$@" | sed -e 's/^/#	/'
-	junit_testcase "$test_name" "<failure type=\"unknown\"><![CDATA[$@]]></failure>"
+	junit_testcase "$test_name" "<failure type=\"unknown\"><![CDATA[$*]]></failure>"
 
 	test "$immediate" = "" || { EXIT_OK=t; exit 1; }
 }
@@ -463,7 +463,12 @@ test_eval_() {
 }
 
 time_now_ms() {
-	date --version >/dev/null 2>&1 && date +%s%3N || date +%s000
+	if date --version >/dev/null 2>&1
+	then
+		date +%s%3N
+	else
+		date +%s000
+	fi
 }
 
 test_run_() {
@@ -475,7 +480,7 @@ test_run_() {
 	eval_ret=$?
 
 	if test -n "$junit"; then
-		echo $(expr $(time_now_ms) - ${start_time_ms} ) > .junit/time;
+		echo "$(($(time_now_ms) - start_time_ms))" > .junit/time;
 	fi
 
 	if test "$chain_lint" = "t"; then
@@ -503,6 +508,7 @@ test_run_() {
 	return "$eval_ret"
 }
 
+# shellcheck disable=SC2254
 test_skip_() {
 	SHARNESS_TEST_NB=$((SHARNESS_TEST_NB + 1))
 	to_skip=
@@ -518,7 +524,7 @@ test_skip_() {
 	fi
 	case "$to_skip" in
 	t)
-		test_skipped=$(($test_skipped + 1))
+		test_skipped=$((test_skipped + 1))
 
 		of_prereq=
 		if test "$missing_prereq" != "$test_prereq"; then
@@ -556,7 +562,7 @@ export PATH
 SHARNESS_TEST_FILE="$0"
 export SHARNESS_TEST_FILE
 
-SHARNESS_TEST_NAME=$(basename ${SHARNESS_TEST_FILE} ".sh")
+SHARNESS_TEST_NAME=$(basename "${SHARNESS_TEST_FILE}" ".sh")
 export SHARNESS_TEST_NAME
 
 remove_trash_() {
@@ -584,25 +590,29 @@ rm -rf "$SHARNESS_TRASH_DIRECTORY" || {
 #
 #  Load any extensions in $srcdir/sharness.d/*.sh
 #
-if test -d "${SHARNESS_TEST_SRCDIR}/sharness.d"
-then
-	for file in "${SHARNESS_TEST_SRCDIR}"/sharness.d/*.sh
-	do
-		# Ensure glob was not an empty match:
-		test -e "${file}" || break
+# shellcheck disable=SC1090
+load_extensions_() {
+	if test -d "${SHARNESS_TEST_SRCDIR}/sharness.d"
+	then
+		for file in "${SHARNESS_TEST_SRCDIR}"/sharness.d/*.sh
+		do
+			# Ensure glob was not an empty match:
+			test -e "${file}" || break
 
-		if test -n "$debug"
-		then
-			echo >&5 "sharness: loading extensions from ${file}"
-		fi
-		. "${file}"
-		if test $? != 0
-		then
-			echo >&5 "sharness: Error loading ${file}. Aborting."
-			exit 1
-		fi
-	done
-fi
+			if test -n "$debug"
+			then
+				echo >&5 "sharness: loading extensions from ${file}"
+			fi
+			. "${file}"
+			if test $? != 0
+			then
+				echo >&5 "sharness: Error loading ${file}. Aborting."
+				exit 1
+			fi
+		done
+	fi
+}
+load_extensions_
 
 # Public: Empty trash directory, the test area, provided for each test. The HOME
 # variable is set to that directory too.
@@ -630,16 +640,20 @@ if test -n "$junit"; then
 	eval 'exec > >(tee -a .junit/stdout_total) 2> >(tee -a .junit/stderr_total)'
 fi
 
-this_test=${SHARNESS_TEST_FILE##*/}
-this_test=${this_test%.$SHARNESS_TEST_EXTENSION}
-for skp in $SKIP_TESTS; do
-	case "$this_test" in
-	$skp)
-		say_color info >&3 "skipping test $this_test altogether"
-		skip_all="skip all tests in $this_test"
-		test_done
-	esac
-done
+# shellcheck disable=SC2254
+test_skip_all_() {
+	this_test=${SHARNESS_TEST_FILE##*/}
+	this_test=${this_test%."$SHARNESS_TEST_EXTENSION"}
+	for skp in $SKIP_TESTS; do
+		case "$this_test" in
+		$skp)
+			say_color info >&3 "skipping test $this_test altogether"
+			skip_all="skip all tests in $this_test"
+			test_done
+		esac
+	done
+}
+test_skip_all_
 
 test -n "$TEST_LONG" && test_set_prereq EXPENSIVE
 test -n "$TEST_INTERACTIVE" && test_set_prereq INTERACTIVE

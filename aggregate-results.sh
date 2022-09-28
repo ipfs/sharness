@@ -23,6 +23,7 @@ broken=0
 total=0
 
 while read -r file; do
+	test_name=$(expr "$file" : 'test-results/\(.*\)\.[0-9]*\.counts')
 	while read -r type value; do
 		case $type in
 		'')
@@ -34,7 +35,6 @@ while read -r file; do
 		failed)
 			failed=$((failed + value))
 			if test "$value" != 0; then
-				test_name=$(expr "$file" : 'test-results/\(.*\)\.[0-9]*\.counts')
 				failed_tests="$failed_tests $test_name"
 			fi
 			;;
