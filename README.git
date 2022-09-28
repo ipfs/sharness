@@ -88,6 +88,10 @@ appropriately before running "make".
 	This causes the test to immediately exit upon the first
 	failed test.
 
+--junit::
+  This makes the test create a partial JUnit report in the
+  file named `t/test-reults/$TEST_NAME.$$.xml.part.
+
 --long-tests::
 	This causes additional long-running tests to be run (where
 	available), for more exhaustive testing.
