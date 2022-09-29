@@ -549,6 +549,8 @@ test_done() {
 		mkdir -p "$test_results_dir"
 		test_results_path="$test_results_dir/$this_test.$$.counts"
 		junit_results_path="$test_results_dir/$this_test.$$.xml.part"
+		suite_package="$(echo "sharness$(uname -s).${SHARNESS_TEST_NAME}" | escape_xml_)"
+		suite_name="$(echo "${SHARNESS_TEST_NAME}" | escape_xml_)"
 
 		cat >>"$test_results_path" <<-EOF
 		total $SHARNESS_TEST_NB
@@ -564,7 +566,7 @@ test_done() {
 			time_sec="$(printf "%04d" "$(cat .junit/time_total)" | sed -e 's/\(...\)$/.\1/g')"
 
 			cat >>"$junit_results_path" <<-EOF
-			<testsuite skipped="$test_skipped" errors="$test_broken" failures="$((test_failure+test_fixed))" tests="$SHARNESS_TEST_NB" package="sharness$(uname -s).${SHARNESS_TEST_NAME}" name="${SHARNESS_TEST_NAME}" time="${time_sec}" timestamp="${timestamp}" hostname="${hostname}">
+			<testsuite skipped="$test_skipped" errors="$test_broken" failures="$((test_failure+test_fixed))" tests="$SHARNESS_TEST_NB" package="${suite_package}" name="${suite_name}" time="${time_sec}" timestamp="${timestamp}" hostname="${hostname}">
 				$(find .junit -name 'case-*' | sort | xargs cat)
 			EOF
 

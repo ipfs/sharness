@@ -339,6 +339,15 @@ remove_escape_sequences_() {
 	'
 }
 
+escape_xml_() {
+	sed '
+		s#&#\&amp;#g
+		s#<#\&lt;#g
+		s#>#\&gt;#g
+		s#"#\&quot;#g
+	'
+}
+
 junit_testcase() {
 	if test -z "$junit"; then
 		return
@@ -347,12 +356,14 @@ junit_testcase() {
 	test_name=$1
 	tc_file=".junit/case-$(printf "%04d" $SHARNESS_TEST_NB)"
 	time_sec="$(printf '%04d' "$(cat .junit/time)" | sed -e 's/\(...\)$/.\1/g')"
+	case_name="$(echo "$SHARNESS_TEST_NB - $test_name" | escape_xml_)"
+	case_class="$(echo "sharness$(uname -s).${SHARNESS_TEST_NAME}" | escape_xml_)"
 
 	echo "$(($(cat .junit/time_total) + $(cat .junit/time) ))" > .junit/time_total
 
 	shift
 	cat > "$tc_file" <<-EOF
-	<testcase name="$SHARNESS_TEST_NB - $test_name" classname="sharness$(uname -s).${SHARNESS_TEST_NAME}" time="${time_sec}">
+	<testcase name="$case_name" classname="$case_class" time="${time_sec}">
 	$@
 	EOF
 
