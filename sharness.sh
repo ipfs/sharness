@@ -106,8 +106,11 @@ unset VISUAL CDPATH GREP_OPTIONS
 		tput bold >/dev/null 2>&1 &&
 		tput setaf 1 >/dev/null 2>&1 &&
 		tput sgr0 >/dev/null 2>&1
-	) &&
-	color=t
+	)
+if test "$?" != "0"
+then
+	no_color=t
+fi
 
 while test "$#" -ne 0; do
 	case "$1" in
@@ -134,7 +137,7 @@ while test "$#" -ne 0; do
 	--no-chain-lint)
 		chain_lint=; shift ;;
 	--no-color)
-		color=; shift ;;
+		no_color=t; shift ;;
 	--tee)
 		shift ;; # was handled already
 	--root=*)
@@ -151,7 +154,7 @@ while test "$#" -ne 0; do
 	esac
 done
 
-if test -n "$color"; then
+if test -z "$no_color"; then
 	# Save the color control sequences now rather than run tput
 	# each time say_color() is called.  This is done for two
 	# reasons:

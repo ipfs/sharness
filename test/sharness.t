@@ -518,13 +518,13 @@ test_expect_success 'SHARNESS_ORIG_TERM propagated to sub-sharness' "
 	)
 "
 
-[ -z "$color" ] || test_set_prereq COLOR
+[ -n "$no_color" ] || test_set_prereq COLOR
 test_expect_success COLOR,PERL_AND_TTY 'sub-sharness still has color' "
 	run_sub_test_lib_test \
 	  test-color \
 	  'sub-sharness color check' \
 	  test_terminal <<-\\EOF
-	test_expect_success 'color is enabled' '[ -n \"\$color\" ]'
+	test_expect_success 'color is enabled' '[ -z \"\$no_color\" ]'
 	test_done
 	EOF
 "
