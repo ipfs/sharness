@@ -329,7 +329,7 @@ hostname="$(uname -nmsr)"
 
 # remove ANSI and VT100 escape sequences
 remove_escape_sequences_() {
-	sed '
+	sed -e '
 		s#\x1b\[[0-9;]*[mGKHF]##g
 		s#\x1b [FGLMN]##g
 		s#\x1b#[34568]##g
@@ -340,7 +340,7 @@ remove_escape_sequences_() {
 }
 
 escape_xml_() {
-	sed '
+	sed -e '
 		s#&#\&amp;#g
 		s#<#\&lt;#g
 		s#>#\&gt;#g
