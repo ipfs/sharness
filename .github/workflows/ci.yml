@@ -14,9 +14,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
-    - name: Install IO::Pty
+    - name: Install IO::Pty and xmllint
       if: matrix.os == 'ubuntu-latest'
-      run: sudo apt-get update -y && sudo apt-get install -y libio-pty-perl
+      run: sudo apt-get update -y && sudo apt-get install -y libio-pty-perl libxml2-utils
     - name: Run Tests
       env:
         TEST_OPTS: -v
