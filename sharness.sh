@@ -327,6 +327,18 @@ hostname="$(uname -nmsr)"
 
 # junit_testcase generates a testcase xml file after each test
 
+# remove ANSI and VT100 escape sequences
+remove_escape_sequences_() {
+	sed '
+		s#\x1b\[[0-9;]*[mGKHF]##g
+		s#\x1b [FGLMN]##g
+		s#\x1b#[34568]##g
+		s#\x1b%[@G]##g
+		s#\x1b[\(\)\*\+-\./]([ABCHKQRYZ4=`E60<>]|"[>4\?]|%[26=053]|&[45])##g
+		s#\x1b[6789=>Fclmno\|\}~]##
+	'
+}
+
 junit_testcase() {
 	if test -z "$junit"; then
 		return
@@ -346,13 +358,13 @@ junit_testcase() {
 
 	if test -f .junit/stdout && test -s .junit/stdout; then
 		cat >> "$tc_file" <<-EOF
-		<system-out><![CDATA[$(cat .junit/stdout)]]></system-out>
+		<system-out><![CDATA[$(remove_escape_sequences_ < .junit/stdout)]]></system-out>
 		EOF
 	fi
 
 	if test -f .junit/stderr && test -s .junit/stderr; then
 		cat >> "$tc_file" <<-EOF
-		<system-err><![CDATA[$(cat .junit/stderr)]]></system-err>
+		<system-err><![CDATA[$(remove_escape_sequences_ < .junit/stderr)]]></system-err>
 		EOF
 	fi
 

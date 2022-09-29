@@ -570,13 +570,13 @@ test_done() {
 
 			if test -f .junit/stdout_total && test -s .junit/stdout_total; then
 				cat >> "$junit_results_path" <<-EOF
-				<system-out><![CDATA[$(cat .junit/stdout_total)]]></system-out>
+				<system-out><![CDATA[$(remove_escape_sequences_ < .junit/stdout_total)]]></system-out>
 				EOF
 			fi
 
 			if test -f .junit/stderr_total && test -s .junit/stderr_total; then
 				cat >> "$junit_results_path" <<-EOF
-				<system-err><![CDATA[$(cat .junit/stderr_total)]]></system-err>
+				<system-err><![CDATA[$(remove_escape_sequences_ < .junit/stderr_total)]]></system-err>
 				EOF
 			fi
 
