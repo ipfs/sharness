@@ -399,7 +399,7 @@ test_failure_() {
 	test_name=$1
 	shift
 	echo "$@" | sed -e 's/^/#	/'
-	junit_testcase "$test_name" "<failure type=\"unknown\"><![CDATA[$*]]></failure>"
+	junit_testcase "$test_name" "<failure type=\"unknown breakage\"><![CDATA[$*]]></failure>"
 
 	test "$immediate" = "" || { EXIT_OK=t; exit 1; }
 }
